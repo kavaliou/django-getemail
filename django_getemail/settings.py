@@ -25,7 +25,7 @@ class Settings(object):
 
     @property
     def MAIL_PASSWORD(self):
-        return CONFIG.get('MAIL_PASSWORD'')
+        return CONFIG.get('MAIL_PASSWORD')
 
     @property
     def MAIL_FOLDER(self):
