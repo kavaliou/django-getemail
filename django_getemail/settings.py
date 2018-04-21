@@ -5,7 +5,8 @@ CONFIG_DEFAULTS = {
     'FETCH_FOR_DAYS': 3,
     'IMPORTED_EMAIL_LABEL': 'imported',
     'ERROR_EMAIL_LABEL': 'error',
-    'SEND_GETEMAIL_EVENT': True
+    'SEND_GETEMAIL_EVENT': True,
+    'RABBITMQ_HOST': 'localhost',
 }
 
 USER_CONFIG = getattr(settings, 'DJANGO_GETEMAIL_CONFIG', {})
@@ -52,7 +53,15 @@ class Settings(object):
         return CONFIG.get('SEND_GETEMAIL_EVENT')
 
     @property
-    def QUEUE_NAME(self):
-        return CONFIG.get('QUEUE_NAME')
+    def ROUTING_KEY(self):
+        return CONFIG.get('ROUTING_KEY')
+
+    @property
+    def RABBITMQ_HOST(self):
+        return CONFIG.get('RABBITMQ_HOST')
+
+    @property
+    def EXCHANGE_NAME(self):
+        return CONFIG.get('EXCHANGE_NAME')
 
 conf = Settings()

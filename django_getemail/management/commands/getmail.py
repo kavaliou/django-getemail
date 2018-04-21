@@ -14,9 +14,10 @@ from django_getemail.settings import conf
 
 class Command(BaseCommand):
     help = 'Starts Gmail receiver'
+    connection = pika.BlockingConnection(pika.ConnectionParameters(host=conf.RABBITMQ_HOST))
 
     @staticmethod
-    def connect_to_gmail():
+    def _connect_to_gmail():
         try:
             gmail_client = GmailClient(conf.MAIL_LOGIN, conf.MAIL_PASSWORD)
         except (EmailClientException, ReadOnlyEmailClientException) as exc:
@@ -24,7 +25,7 @@ class Command(BaseCommand):
         return gmail_client
 
     @staticmethod
-    def get_search_query(latest_uid):
+    def _get_search_query(latest_uid):
         if settings.DEBUG:
             week_ago_str = (datetime.now() - timedelta(days=conf.FETCH_FOR_DAYS)).strftime('%d-%b-%Y')
             time_filter = 'SINCE "{}"'.format(week_ago_str)
@@ -35,10 +36,11 @@ class Command(BaseCommand):
 
         return '({}{})'.format(time_filter, uid_filter) if time_filter or uid_filter else 'ALL'
 
-    def handle(self, *args, **options):
+    def _run_email_client(self):
         latest_uid = None
 
-        gmail_client = self.connect_to_gmail()
+        gmail_client = self._connect_to_gmail()
+        channel = self.connection.channel()
 
         while True:
             gmail_client.select_folder(conf.MAIL_FOLDER)
@@ -48,7 +50,7 @@ class Command(BaseCommand):
                 if latest_email:
                     latest_uid = latest_email.uid
 
-            search_query = self.get_search_query(latest_uid)
+            search_query = self._get_search_query(latest_uid)
 
             # filter messages by label
             label_filter = 'label:{}'.format(conf.FILTERING_LABEL)
@@ -56,10 +58,10 @@ class Command(BaseCommand):
             try:
                 new_email_uids = gmail_client.search_email_uids(search_query, label_filter=label_filter)
             except ServiceError as err:
-                gmail_client = self.connect_to_gmail()
+                gmail_client = self._connect_to_gmail()
                 continue
             except EmailClientException as exc:
-                print(exc.message)
+                self.stdout.write(exc.message)
                 break
 
             if len(new_email_uids) == 1 and new_email_uids[0] == latest_uid:  # No new emails
@@ -69,7 +71,7 @@ class Command(BaseCommand):
                 try:
                     raw_email = gmail_client.get_raw_email_by_uid(uid).decode()
                 except ServiceError:
-                    gmail_client = self.connect_to_gmail()
+                    gmail_client = self._connect_to_gmail()
                     break
 
                 parser = EmailParser(raw_email)
@@ -92,18 +94,15 @@ class Command(BaseCommand):
                 else:
                     latest_uid = uid
                     gmail_client.set_label_by_uid(uid, conf.IMPORTED_EMAIL_LABEL)
-                    if conf.SEND_GETEMAIL_EVENT:
-                        connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
-                        channel = connection.channel()
-                        channel.queue_declare(queue=conf.QUEUE_NAME, durable=True)
 
-                        channel.basic_publish(
-                            exchange='',
-                            routing_key=conf.QUEUE_NAME,
-                            body='{}'.format(email.id),
-                            properties=pika.BasicProperties(
-                                delivery_mode=2,  # make message persistent
-                            ))
-                        connection.close()
-                    else:
-                        email.send_imported_email_signal()
+                    channel.basic_publish(
+                        exchange=conf.EXCHANGE_NAME,
+                        routing_key=conf.ROUTING_KEY,
+                        body=email.id,
+                        properties=pika.BasicProperties(delivery_mode=2, ))
+
+    def handle(self, *args, **options):
+        try:
+            self._run_email_client()
+        except KeyboardInterrupt:
+            self.connection.close()
