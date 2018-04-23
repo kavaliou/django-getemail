@@ -41,6 +41,7 @@ class Command(BaseCommand):
 
         gmail_client = self._connect_to_gmail()
         channel = self.connection.channel()
+        channel.exchange_declare(exchange=settings.EXCHANGE_NAME)
 
         while True:
             gmail_client.select_folder(conf.MAIL_FOLDER)
@@ -98,7 +99,7 @@ class Command(BaseCommand):
                     channel.basic_publish(
                         exchange=conf.EXCHANGE_NAME,
                         routing_key=conf.ROUTING_KEY,
-                        body=email.id,
+                        body=str(email.id),
                         properties=pika.BasicProperties(delivery_mode=2, ))
 
     def handle(self, *args, **options):
