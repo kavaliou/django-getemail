@@ -10,11 +10,12 @@ from django_getemail.email_client.exceptions import EmailClientException, ReadOn
 from django_getemail.email_parser import EmailParser, EmailParserException
 from django_getemail.models import Email
 from django_getemail.settings import conf
+from django_getemail.utils import Publisher
 
 
 class Command(BaseCommand):
     help = 'Starts Gmail receiver'
-    connection = pika.BlockingConnection(pika.ConnectionParameters(host=conf.RABBITMQ_HOST))
+    email_publisher = Publisher(conf.RABBITMQ_HOST, conf.EXCHANGE_NAME, conf.ROUTING_KEY)
 
     @staticmethod
     def _connect_to_gmail():
@@ -40,8 +41,7 @@ class Command(BaseCommand):
         latest_uid = None
 
         gmail_client = self._connect_to_gmail()
-        channel = self.connection.channel()
-        channel.exchange_declare(exchange=settings.EXCHANGE_NAME)
+        self.email_publisher.connect()
 
         while True:
             gmail_client.select_folder(conf.MAIL_FOLDER)
@@ -95,15 +95,10 @@ class Command(BaseCommand):
                 else:
                     latest_uid = uid
                     gmail_client.set_label_by_uid(uid, conf.IMPORTED_EMAIL_LABEL)
-
-                    channel.basic_publish(
-                        exchange=conf.EXCHANGE_NAME,
-                        routing_key=conf.ROUTING_KEY,
-                        body=str(email.id),
-                        properties=pika.BasicProperties(delivery_mode=2, ))
+                    self.email_publisher.publish(str(email.id))
 
     def handle(self, *args, **options):
         try:
             self._run_email_client()
         except KeyboardInterrupt:
-            self.connection.close()
+            self.email_publisher.close()
