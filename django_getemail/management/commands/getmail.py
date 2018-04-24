@@ -33,9 +33,11 @@ class Command(BaseCommand):
         else:
             time_filter = ''
 
-        uid_filter = ' UID {}:*'.format(int(latest_uid) + 1) if latest_uid else ''
+        uid_filter = 'UID {}:*'.format(int(latest_uid) + 1) if latest_uid else ''
 
-        return '({}{})'.format(time_filter, uid_filter) if time_filter or uid_filter else 'ALL'
+        search_query = '{}{}'.format(time_filter, uid_filter)
+
+        return '({})'.format(search_query.strip()) if time_filter or uid_filter else 'ALL'
 
     def _run_email_client(self):
         latest_uid = None
