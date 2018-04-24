@@ -24,7 +24,7 @@ class BaseEmailClient(object):
         try:
             self._mail.login(self._login, self._password)
         except imaplib.IMAP4.error as exc:
-            raise EmailClientException(msg=exc)
+            raise EmailClientException(msg=str(exc))
         except Exception as exc:
             raise exc
 
@@ -41,9 +41,9 @@ class BaseEmailClient(object):
         try:
             result, uids = self._find_emails_uids(search_query, *args, **kwargs)
         except imaplib.IMAP4_SSL.error as exc:
-            raise EmailClientException(msg=exc)
+            raise EmailClientException(msg=str(exc))
         except imaplib.IMAP4_SSL.abort as exc:
-            raise ServiceError(msg=exc)
+            raise ServiceError(msg=str(exc))
         return uids[0].decode().split()
 
     def _fetch_email_by_uid(self, uid):
@@ -53,9 +53,9 @@ class BaseEmailClient(object):
         try:
             result, data = self._fetch_email_by_uid(uid)
         except imaplib.IMAP4_SSL.error as exc:
-            raise EmailClientException(msg=exc)
+            raise EmailClientException(msg=str(exc))
         except imaplib.IMAP4_SSL.abort as exc:
-            raise ServiceError(msg=exc)
+            raise ServiceError(msg=str(exc))
         return data[0][1]
 
 
