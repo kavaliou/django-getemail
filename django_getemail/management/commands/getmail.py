@@ -35,7 +35,7 @@ class Command(BaseCommand):
 
         uid_filter = 'UID {}:*'.format(int(latest_uid) + 1) if latest_uid else ''
 
-        search_query = '{}{}'.format(time_filter, uid_filter)
+        search_query = '{} {}'.format(time_filter, uid_filter)
 
         return '({})'.format(search_query.strip()) if time_filter or uid_filter else 'ALL'
 
@@ -85,6 +85,7 @@ class Command(BaseCommand):
                         'content': parser.get_content(),
                         'subject': parser.get_subject(),
                         'sender': parser.get_from(),
+                        'recipient': parser.get_to(),
                         'raw_email': raw_email
                     }
                     email = Email.objects.create(**email_data)

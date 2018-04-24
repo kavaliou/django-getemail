@@ -37,8 +37,15 @@ class EmailParser(object):
 
         return raw_files
 
-    def get_from(self):
-        regexp = re.search('(<)?(\w+(?:\.\w+)*@\w+(?:\.\w+)+)(?(1)>|$)', self.email['from'])
+    @staticmethod
+    def _find_email(str):
+        regexp = re.search('(<)?(\w+(?:\.\w+)*@\w+(?:\.\w+)+)(?(1)>|$)', str)
         if not regexp:
-            raise EmailParserException("Can't parse sender email.")
+            raise EmailParserException("Can't find email.")
         return regexp.group(2)
+
+    def get_from(self):
+        return self._find_email(self.email['from'])
+
+    def get_to(self):
+        return self._find_email(self.email['Delivered-To'])

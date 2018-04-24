@@ -13,7 +13,6 @@ def upload_to(instance, filename):
 
 class Email(models.Model):
     ERROR = 'error'
-    # IMPORTED = 'imported'
     NEW = 'new'
     RETRYING = 'retrying'
     SKIPPED = 'skipped'
@@ -21,7 +20,6 @@ class Email(models.Model):
 
     processing_statuses = (
         (ERROR, 'Error'),
-        # (IMPORTED, 'Imported'),
         (NEW, 'New'),
         (RETRYING, 'Retrying'),
         (SKIPPED, 'Skipped'),
@@ -33,6 +31,7 @@ class Email(models.Model):
     raw_email = models.TextField()
     subject = models.CharField(max_length=255, null=True, blank=True)
     sender = models.CharField(max_length=255, null=True, blank=True)
+    recipient = models.CharField(max_length=255, null=True, blank=True)
     content = models.TextField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=processing_statuses, default=NEW)
 
