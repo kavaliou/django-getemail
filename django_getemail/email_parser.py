@@ -38,11 +38,11 @@ class EmailParser(object):
         return raw_files
 
     @staticmethod
-    def _find_email(str):
-        regexp = re.search('(<)?(\w+(?:\.\w+)*@\w+(?:\.\w+)+)(?(1)>|$)', str)
-        if not regexp:
+    def _find_email(str_):
+        email_addr = email.utils.parseaddr(str_)[-1]
+        if '@' not in email_addr:
             raise EmailParserException("Can't find email.")
-        return regexp.group(2)
+        return email_addr
 
     def get_from(self):
         return self._find_email(self.email['from'])

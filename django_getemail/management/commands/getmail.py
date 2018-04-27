@@ -1,12 +1,10 @@
-import pika
-
 from datetime import datetime, timedelta
 
 from django.conf import settings
 from django.core.management import BaseCommand
 
 from django_getemail.email_client import GmailClient
-from django_getemail.email_client.exceptions import EmailClientException, ReadOnlyEmailClientException, ServiceError
+from django_getemail.email_client.exceptions import EmailClientException
 from django_getemail.email_parser import EmailParser, EmailParserException
 from django_getemail.models import Email
 from django_getemail.settings import conf
@@ -16,14 +14,7 @@ from django_getemail.utils import Publisher
 class Command(BaseCommand):
     help = 'Starts Gmail receiver'
     email_publisher = Publisher(conf.RABBITMQ_HOST, conf.EXCHANGE_NAME, conf.ROUTING_KEY)
-
-    @staticmethod
-    def _connect_to_gmail():
-        try:
-            gmail_client = GmailClient(conf.MAIL_LOGIN, conf.MAIL_PASSWORD)
-        except (EmailClientException, ReadOnlyEmailClientException) as exc:
-            raise exc
-        return gmail_client
+    gmail_client = GmailClient(conf.MAIL_LOGIN, conf.MAIL_PASSWORD)
 
     @staticmethod
     def _get_search_query(latest_uid):
@@ -42,11 +33,11 @@ class Command(BaseCommand):
     def _run_email_client(self):
         latest_uid = None
 
-        gmail_client = self._connect_to_gmail()
         self.email_publisher.connect()
+        self.gmail_client.connect()
 
         while True:
-            gmail_client.select_folder(conf.MAIL_FOLDER)
+            self.gmail_client.select_folder(conf.MAIL_FOLDER)
 
             if not latest_uid:
                 latest_email = Email.objects.order_by('-uid').first()
@@ -59,10 +50,7 @@ class Command(BaseCommand):
             label_filter = 'label:{}'.format(conf.FILTERING_LABEL)
 
             try:
-                new_email_uids = gmail_client.search_email_uids(search_query, label_filter=label_filter)
-            except ServiceError as err:
-                gmail_client = self._connect_to_gmail()
-                continue
+                new_email_uids = self.gmail_client.search_email_uids(search_query, label_filter=label_filter)
             except EmailClientException as exc:
                 self.stdout.write(exc.message)
                 break
@@ -71,12 +59,7 @@ class Command(BaseCommand):
                 continue
 
             for uid in new_email_uids:
-                try:
-                    raw_email = gmail_client.get_raw_email_by_uid(uid).decode()
-                except ServiceError:
-                    gmail_client = self._connect_to_gmail()
-                    break
-
+                raw_email = self.gmail_client.get_raw_email_by_uid(uid).decode()
                 parser = EmailParser(raw_email)
 
                 try:
@@ -88,16 +71,17 @@ class Command(BaseCommand):
                         'recipient': parser.get_to(),
                         'raw_email': raw_email
                     }
-                    email = Email.objects.create(**email_data)
                     attachments = parser.get_attachments()
-                    email.process_attachments(attachments)
 
                 except EmailParserException as exc:
-                    gmail_client.set_label_by_uid(uid, conf.ERROR_EMAIL_LABEL)
+                    self.stdout.write(exc.message)
+                    self.gmail_client.set_label_by_uid(uid, conf.ERROR_EMAIL_LABEL)
 
                 else:
+                    email = Email.objects.create(**email_data)
+                    email.process_attachments(attachments)
                     latest_uid = uid
-                    gmail_client.set_label_by_uid(uid, conf.IMPORTED_EMAIL_LABEL)
+                    self.gmail_client.set_label_by_uid(uid, conf.IMPORTED_EMAIL_LABEL)
                     self.email_publisher.publish(str(email.id))
 
     def handle(self, *args, **options):
