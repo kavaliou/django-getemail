@@ -9,7 +9,7 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
     name='django-getemail',
-    version='0.1.5',
+    version='0.1.6',
     packages=find_packages(),
     include_package_data=True,
     license='BSD License',
@@ -20,7 +20,7 @@ setup(
     author_email='anna.d@razortheory.com',
     install_requires=[
             'Django>=1.11',
-            'pika==0.11.2'
+            'pika==0.12.0'
         ],
     classifiers=[
         'Environment :: Web Environment',
