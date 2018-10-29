@@ -52,8 +52,8 @@ class Command(BaseCommand):
             try:
                 new_email_uids = self.gmail_client.search_email_uids(search_query, label_filter=label_filter)
             except EmailClientException as exc:
-                self.stdout.write(exc.message)
-                break
+                self.stdout.write(search_query)
+                raise exc
 
             if len(new_email_uids) == 1 and new_email_uids[0] == latest_uid:  # No new emails
                 continue
@@ -88,4 +88,6 @@ class Command(BaseCommand):
         try:
             self._run_email_client()
         except KeyboardInterrupt:
+            self.stdout.out('Keyboard Interrupt')
+        finally:
             self.email_publisher.close()

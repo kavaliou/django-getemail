@@ -1,10 +1,10 @@
+import mailparser
 import tempfile
 
 from django.core.files import File
 from django.db import models
 
 from django_getemail.signals import email_imported
-from .email_parser import EmailParser
 
 
 def upload_to(instance, filename):
@@ -43,26 +43,26 @@ class Email(models.Model):
         self.save(update_fields=('status', ))
 
     def process_attachments(self, attachments):
-        for item in attachments:
-            filename, payload = item
+        for attach in attachments:
+            filename, payload = attach.get('filename'), attach.get('payload')
             with tempfile.TemporaryFile() as output_:
                 output_.write(payload)
                 EmailAttachment.objects.create(file=File(output_, filename), email=self)
 
     def process(self, parse_attachments=True):
-        parser = EmailParser(self.raw_email)
+        parser = mailparser.parse_from_string(self.raw_email)
         try:
-            self.sender = parser.get_from()
-            self.subject = parser.get_subject()
-            self.content = parser.get_content()
+            self.sender = parser.from_[0][-1]
+            self.subject = parser.subject
+            self.content = parser.content
 
             if parse_attachments:
-                attachments = parser.get_attachments()
+                attachments = parser.attachments
                 self.process_attachments(attachments)
 
             self.status = self.PROCESSED
             self.save()
-        except Exception as exc: #Add EmailParser exceptions
+        except Exception as exc:  # Add EmailParser exceptions
             print(exc)
             self.fail_processing()
 

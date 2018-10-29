@@ -1,6 +1,6 @@
 import imaplib
 
-from django_getemail.email_client.exceptions import EmailClientException, ReadOnlyEmailClientException, ServiceError
+from django_getemail.email_client.exceptions import EmailClientException, ReadOnlyEmailClientException
 
 
 class BaseEmailClient(object):

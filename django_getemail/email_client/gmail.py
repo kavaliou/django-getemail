@@ -20,4 +20,5 @@ class GmailClient(BaseEmailClient):
         self._mail.uid('store', uid, '-X-GM-LABELS', label)
         self._mail.expunge()
 
+
 __all__ = ['GmailClient', ]
