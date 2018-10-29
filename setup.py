@@ -21,7 +21,7 @@ setup(
     install_requires=[
             'Django>=1.11',
             'pika==0.12.0',
-            'mailparser==3.6.1'
+            'mail-parser==3.6.1'
         ],
     classifiers=[
         'Environment :: Web Environment',
