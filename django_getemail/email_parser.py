@@ -1,6 +1,6 @@
 import email
 
-import re
+from mailparser.utils import decode_header_part
 
 
 class EmailParserException(Exception):
@@ -25,16 +25,22 @@ class EmailParser(object):
     def get_subject(self):
         return self.email['subject']
 
-    def get_attachments(self):
-        if self.email.get_content_maintype() != 'multipart':
+    def _process_attachements(self, message_part):
+        content_disposition = message_part.get("Content-Disposition", None)
+        if not content_disposition:
             return
+        dispositions = content_disposition.strip().split(";")
+        if content_disposition and dispositions[0].lower() == "attachment":
+            file_data = message_part.get_payload(decode=True)
+            filename = decode_header_part(message_part.get_filename())
+            return filename, file_data
+
+    def get_attachments(self):
         raw_files = []
         for part in self.email.walk():
-            if part.get_content_maintype() == 'multipart' or part.get('Content-Disposition') is None:
-                continue
-
-            raw_files.append((part.get_filename(), part.get_payload(decode=True)))
-
+            attachment = self._process_attachements(message_part=part)
+            if attachment:
+                raw_files.append(attachment)
         return raw_files
 
     @staticmethod
