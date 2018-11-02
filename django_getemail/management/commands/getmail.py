@@ -88,6 +88,6 @@ class Command(BaseCommand):
         try:
             self._run_email_client()
         except KeyboardInterrupt:
-            self.stdout.out('Keyboard Interrupt')
+            self.stdout.write('Keyboard Interrupt')
         finally:
             self.email_publisher.close()

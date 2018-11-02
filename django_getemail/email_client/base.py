@@ -46,12 +46,12 @@ class BaseEmailClient(object):
     def search_email_uids(self, search_query, *args, **kwargs):
         try:
             result, uids = self._find_emails_uids(search_query, *args, **kwargs)
-        except imaplib.IMAP4_SSL.error as exc:
-            raise EmailClientException(msg=str(exc))
         except imaplib.IMAP4_SSL.abort as exc:
             self._mail = None  # need refactoring
             self.connect()
             result, uids = self._find_emails_uids(search_query, *args, **kwargs)
+        except imaplib.IMAP4_SSL.error as exc:
+            raise EmailClientException(msg=str(exc))
         return uids[0].decode().split()
 
     def _fetch_email_by_uid(self, uid):
@@ -60,12 +60,12 @@ class BaseEmailClient(object):
     def get_raw_email_by_uid(self, uid):
         try:
             result, data = self._fetch_email_by_uid(uid)
-        except imaplib.IMAP4_SSL.error as exc:
-            raise EmailClientException(msg=str(exc))
         except imaplib.IMAP4_SSL.abort as exc:
             self._mail = None
             self.connect()
             result, data = self._fetch_email_by_uid(uid)
+        except imaplib.IMAP4_SSL.error as exc:
+            raise EmailClientException(msg=str(exc))
         return data[0][1]
 
 
