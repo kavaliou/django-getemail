@@ -2,6 +2,7 @@ import tempfile
 
 from django.core.files import File
 from django.db import models
+from django.db.models.functions import Cast
 
 from django_getemail.signals import email_imported
 from .email_parser import EmailParser
@@ -68,6 +69,15 @@ class Email(models.Model):
 
     def send_imported_email_signal(self):
         email_imported.send(sender=self.__class__, email=self)
+
+    @staticmethod
+    def latest_uid():
+        latest_email = Email.objects\
+            .annotate(uid_number=Cast('uid', models.IntegerField()))\
+            .order_by('-uid_number')\
+            .first()
+        if latest_email:
+            return latest_email.uid
 
 
 class EmailAttachment(models.Model):

@@ -40,9 +40,7 @@ class Command(BaseCommand):
             self.gmail_client.select_folder(conf.MAIL_FOLDER)
 
             if not latest_uid:
-                latest_email = Email.objects.order_by('-uid').first()
-                if latest_email:
-                    latest_uid = latest_email.uid
+                latest_uid = Email.latest_uid()
 
             search_query = self._get_search_query(latest_uid)
 
